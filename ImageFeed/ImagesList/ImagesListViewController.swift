@@ -7,28 +7,34 @@
 
 import UIKit
 
-class ImagesListViewController: UIViewController {
-    
-    private let photosName: [String] = Array(0..<20).map{ "\($0)" }
-    
-    @IBOutlet private var tableView: UITableView!
-    
+final class ImagesListViewController: UIViewController {
+
+    // MARK: - IBOutlets
+
+    @IBOutlet private weak var tableView: UITableView!
+
+    // MARK: - Private Properties
+
+    private let photosName = (0..<20).map { String($0) }
+
     private lazy var dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .long
         formatter.timeStyle = .none
         return formatter
     }()
-    
+
+    // MARK: - Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         tableView.contentInset = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
     }
-}
 
-extension ImagesListViewController {
-    func configCell(for cell: ImagesListCell, with indexPath: IndexPath) {
+    // MARK: - Private Methods
+
+    private func configCell(for cell: ImagesListCell, with indexPath: IndexPath) {
         guard let image = UIImage(named: photosName[indexPath.row]) else {
             return
         }
@@ -43,7 +49,9 @@ extension ImagesListViewController {
 }
 
 extension ImagesListViewController: UITableViewDelegate {
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) { }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         guard let image = UIImage(named: photosName[indexPath.row]) else {

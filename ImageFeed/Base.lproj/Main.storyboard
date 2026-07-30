@@ -35,8 +35,15 @@
                                                         <userDefinedRuntimeAttribute type="boolean" keyPath="layer.masksToBounds" value="YES"/>
                                                     </userDefinedRuntimeAttributes>
                                                 </imageView>
+                                                <view alpha="0.90000000000000002" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="VEg-7n-idp" userLabel="Gradient View">
+                                                    <rect key="frame" x="0.0" y="273" width="393" height="40"/>
+                                                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                    <constraints>
+                                                        <constraint firstAttribute="height" constant="40" id="aZj-n7-TgG"/>
+                                                    </constraints>
+                                                </view>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="27 августа 2022" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="XWN-X6-cVX" userLabel="DateLabel">
-                                                    <rect key="frame" x="24.000000000000007" y="285.33333333333331" width="101.66666666666669" height="15.666666666666686"/>
+                                                    <rect key="frame" x="24.000000000000007" y="273" width="101.66666666666669" height="28"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="13"/>
                                                     <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                                     <nil key="highlightedColor"/>
@@ -53,10 +60,14 @@
                                             </subviews>
                                             <constraints>
                                                 <constraint firstItem="LyA-0P-wIT" firstAttribute="top" secondItem="iru-de-dHd" secondAttribute="top" id="1Yw-wH-fPx"/>
+                                                <constraint firstAttribute="bottom" secondItem="VEg-7n-idp" secondAttribute="bottom" id="1a3-Bd-EMB"/>
                                                 <constraint firstItem="iru-de-dHd" firstAttribute="leading" secondItem="E48-dc-LyL" secondAttribute="leading" constant="16" id="49b-tr-yPT"/>
+                                                <constraint firstItem="VEg-7n-idp" firstAttribute="leading" secondItem="E48-dc-LyL" secondAttribute="leading" id="6lT-A6-6z6"/>
                                                 <constraint firstAttribute="trailing" secondItem="iru-de-dHd" secondAttribute="trailing" constant="16" id="IHN-DB-ezo"/>
                                                 <constraint firstItem="XWN-X6-cVX" firstAttribute="leading" secondItem="iru-de-dHd" secondAttribute="leading" constant="8" id="Lhc-S8-FGx"/>
                                                 <constraint firstItem="iru-de-dHd" firstAttribute="top" secondItem="E48-dc-LyL" secondAttribute="top" constant="4" id="MqG-Jj-q3f"/>
+                                                <constraint firstAttribute="trailing" secondItem="VEg-7n-idp" secondAttribute="trailing" id="OcO-WB-j7F"/>
+                                                <constraint firstItem="VEg-7n-idp" firstAttribute="top" secondItem="XWN-X6-cVX" secondAttribute="top" id="OgE-Jp-G3b"/>
                                                 <constraint firstItem="iru-de-dHd" firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="XWN-X6-cVX" secondAttribute="trailing" constant="8" id="QBp-eV-AV6"/>
                                                 <constraint firstItem="iru-de-dHd" firstAttribute="bottom" secondItem="XWN-X6-cVX" secondAttribute="bottom" constant="8" id="YjA-p4-xRs"/>
                                                 <constraint firstAttribute="bottom" secondItem="iru-de-dHd" secondAttribute="bottom" constant="4" id="xgK-6C-WbY"/>
@@ -67,6 +78,7 @@
                                         <connections>
                                             <outlet property="cellImage" destination="iru-de-dHd" id="RY2-ey-nt9"/>
                                             <outlet property="dateLabel" destination="XWN-X6-cVX" id="7FP-gW-hfY"/>
+                                            <outlet property="gradientView" destination="VEg-7n-idp" id="MUF-eb-tSk"/>
                                             <outlet property="likeButton" destination="LyA-0P-wIT" id="5RX-Ov-WRD"/>
                                         </connections>
                                     </tableViewCell>
