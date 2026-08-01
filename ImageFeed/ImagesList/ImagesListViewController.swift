@@ -8,6 +8,9 @@
 import UIKit
 
 final class ImagesListViewController: UIViewController {
+    
+    // 1. Создаём константу для имени перехода в одном месте
+    private let showSingleImageSegueIdentifier = "ShowSingleImage"
 
     // MARK: - IBOutlets
 
@@ -31,6 +34,32 @@ final class ImagesListViewController: UIViewController {
 
         tableView.contentInset = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
     }
+    
+    // 2. Метод подготовки к переходу
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        // Сравниваем с нашей константой
+        if segue.identifier == showSingleImageSegueIdentifier {
+            
+            // Безопасно разворачиваем новый экран и индекс нажатой ячейки
+            guard
+                let viewController = segue.destination as? SingleImageViewController,
+                let indexPath = sender as? IndexPath
+            else {
+                assertionFailure("Invalid segue destination")
+                return
+            }
+            
+            // Достаем картинку из массива по индексу
+            let image = UIImage(named: photosName[indexPath.row])
+            
+            // ЧЕСТНОЕ РЕШЕНИЕ: кладем картинку в простую промежуточную переменную image
+            viewController.image = image
+            
+        } else {
+            super.prepare(for: segue, sender: sender)
+        }
+    
+    }
 
     // MARK: - Private Methods
 
@@ -50,7 +79,8 @@ final class ImagesListViewController: UIViewController {
 
 extension ImagesListViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
+//        tableView.deselectRow(at: indexPath, animated: true)
+        performSegue(withIdentifier: showSingleImageSegueIdentifier, sender: indexPath)
     }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
