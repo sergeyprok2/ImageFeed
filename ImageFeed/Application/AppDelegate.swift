@@ -13,8 +13,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        configureTabBarAppearance()
         // Override point for customization after application launch.
         return true
+    }
+    
+    // MARK:  Private function
+
+    private func configureTabBarAppearance() {
+        let backgroundColor = UIColor(named: "YP Black (iOS)") ?? .black
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = backgroundColor
+        appearance.shadowColor = .clear
+
+        let tabBarAppearance = UITabBar.appearance()
+        tabBarAppearance.standardAppearance = appearance
+        tabBarAppearance.scrollEdgeAppearance = appearance
+        tabBarAppearance.backgroundColor = backgroundColor
+        tabBarAppearance.isTranslucent = false
     }
 
     // MARK: UISceneSession Lifecycle

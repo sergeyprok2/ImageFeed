@@ -8,14 +8,6 @@
 
 import Foundation
 
-struct OAuthTokenResponseBody: Decodable {
-    let accessToken: String
-
-    private enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-    }
-}
-
 final class OAuth2Service {
     static let shared = OAuth2Service()
 
@@ -25,6 +17,7 @@ final class OAuth2Service {
         guard var urlComponents = URLComponents(
             string: WebViewConstants.unsplashTokenURLString
         ) else {
+            print("[OAuth2Service] ❌ Ошибка: Не удалось создать URLComponents из строки: \(WebViewConstants.unsplashTokenURLString)")
             return nil
         }
 
@@ -52,6 +45,7 @@ final class OAuth2Service {
         ]
 
         guard let url = urlComponents.url else {
+            print("[OAuth2Service] ❌ Ошибка: Не удалось получить URL из urlComponents")
             return nil
         }
 
@@ -61,11 +55,12 @@ final class OAuth2Service {
         return request
     }
 
-    func fetchOAuthToken(
+    func fetchAuthToken(
         _ code: String,
         completion: @escaping (Result<String, Error>) -> Void
     ) {
         guard let request = makeOAuthTokenRequest(code: code) else {
+            print("[OAuth2Service] ❌ Ошибка: Не удалось создать URLRequest")
             DispatchQueue.main.async {
                 completion(.failure(NetworkError.invalidRequest))
             }
