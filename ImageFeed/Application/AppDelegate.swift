@@ -13,19 +13,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
-        #warning("Закомментировать сброс!")
-        OAuth2TokenStorage.shared.token = nil; WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast, completionHandler: {}) // Сброс для тестов
+//        #warning("Закомментировать сброс!")
+//        OAuth2TokenStorage.shared.token = nil; WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast, completionHandler: {}) // Сброс для тестов
 
-        print("=== ВСЕ КЛЮЧИ В USERDEFAULTS AppDelegate ===")
-        let allDictionary = UserDefaults.standard.dictionaryRepresentation()
-        
-        // Фильтруем системные ключи Apple и оставляем только твои
-        for (key, value) in allDictionary {
-            if !key.hasPrefix("Apple") && !key.hasPrefix("NS") {
-                print("Найден ключ: '\(key)' === Значение: \(value)")
-            }
-        }
-        print("================================")
+//        print("=== ВСЕ КЛЮЧИ В USERDEFAULTS AppDelegate ===")
+//        let allDictionary = UserDefaults.standard.dictionaryRepresentation()
+//        
+//        // Фильтруем системные ключи Apple и оставляем только твои
+//        for (key, value) in allDictionary {
+//            if !key.hasPrefix("Apple") && !key.hasPrefix("NS") {
+//                print("Найден ключ: '\(key)' === Значение: \(value)")
+//            }
+//        }
+//        print("================================")
         configureTabBarAppearance()
         // Override point for customization after application launch.
         return true
