@@ -12,9 +12,11 @@ final class ImagesListViewController: UIViewController {
     // 1. Создаём константу для имени перехода в одном месте
     private let showSingleImageSegueIdentifier = "ShowSingleImage"
 
-    // MARK: - IBOutlets
-
-    @IBOutlet private weak var tableView: UITableView!
+    private let tableView: UITableView = {
+        let tableView = UITableView()
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        return tableView
+    }()
 
     // MARK: - Private Properties
 
@@ -33,6 +35,26 @@ final class ImagesListViewController: UIViewController {
         super.viewDidLoad()
 
         tableView.contentInset = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
+        
+        setupUI()
+        setupConstraints()
+    }
+    
+    private func setupUI() {
+        view.addSubview(tableView)
+        
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.register(ImagesListCell.self, forCellReuseIdentifier: ImagesListCell.reuseIdentifier)
+    }
+
+    private func setupConstraints() {
+        NSLayoutConstraint.activate([
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor)
+        ])
     }
     
     // 2. Метод подготовки к переходу
@@ -80,7 +102,17 @@ final class ImagesListViewController: UIViewController {
 extension ImagesListViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        performSegue(withIdentifier: showSingleImageSegueIdentifier, sender: indexPath)
+        
+        let singleImageVC = SingleImageViewController()
+        
+        // Достаем картинку и передаем в контроллер
+        if let image = UIImage(named: photosName[indexPath.row]) {
+            singleImageVC.image = image
+        }
+        
+        // Показываем модально на весь экран
+        singleImageVC.modalPresentationStyle = .fullScreen
+        present(singleImageVC, animated: true)
     }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
