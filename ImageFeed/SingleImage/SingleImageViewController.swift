@@ -1,9 +1,14 @@
+// MARK: - Шпаргалка по файлу:
+// 🏛 АРХИТЕКТУРНЫЙ КОНТЕКСТ:
+// Контроллер для просмотра одного полноэкранного изображения с поддержкой масштабирования (zoom) и шеринга.
+// Использует `UIScrollView` и `UIImageView` с кастомным алгоритмом расчетного скейлинга и центрирования картинки под экраны любых размеров.
 //
-//  SingleImageViewController.swift
-//  ImageFeed
-//
-//  Created by Сергей on 01.08.2026.
-//
+// 📌 КЛЮЧЕВЫЕ СВОЙСТВА И МЕТОДЫ:
+// 1. image (didSet) — публичное свойство для передачи изображения; обновляет UI только если view уже загружена (`isViewLoaded`).
+// 2. imageView & scrollView — связи из Storyboard/XIB для отображения и зуминга.
+// 3. rescaleAndCenterImageInScrollView(image:) — алгоритм автоматического вписывания картинки в границы scrollView с вычислением оптимального `zoomScale` и центрированием через `contentOffset`.
+// 4. didTapShareButton(_:) — вызывается при нажатии на кнопку "Поделиться", вызывает системный `UIActivityViewController`.
+// 5. viewForZooming(in:) — метод протокола `UIScrollViewDelegate`, указывающий `imageView` как объект для зуминга.
 
 import UIKit
 
@@ -21,13 +26,41 @@ final class SingleImageViewController: UIViewController {
         }
     }
     
-    // MARK: - Outlets
-    @IBOutlet private var imageView: UIImageView!
+    private let imageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
     
-    @IBOutlet private var scrollView: UIScrollView!
+    private let scrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        return scrollView
+    }()
+    
+    private lazy var backButton: UIButton = {
+        let backButton = UIButton.systemButton(
+            with: UIImage(named: "Backward")?.withRenderingMode(.alwaysOriginal) ?? UIImage(),
+            target: self,
+            action: #selector(didTapBackButton))
+        backButton.translatesAutoresizingMaskIntoConstraints = false
+        return backButton
+    }()
+    
+    private lazy var shareButton: UIButton = {
+        let shareButton = UIButton.systemButton(
+            with: UIImage(named: "Sharing")?.withRenderingMode(.alwaysOriginal) ?? UIImage(),
+            target: self,
+            action: #selector(didTapShareButton(_:)))
+        shareButton.translatesAutoresizingMaskIntoConstraints = false
+        return shareButton
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupUI()
+        setupConstraints()
         
         scrollView.minimumZoomScale = 0.1
         scrollView.maximumZoomScale = 1.25
@@ -40,14 +73,43 @@ final class SingleImageViewController: UIViewController {
             imageView.frame.size = image.size
             rescaleAndCenterImageInScrollView(image: image)
         }
+
     }
     
+    private func setupUI() {
+        view.backgroundColor = UIColor(named: "YP Black (iOS)")
+        view.addSubview(scrollView)
+        scrollView.addSubview(imageView)
+        view.addSubview(backButton)
+        view.addSubview(shareButton)
+        scrollView.delegate = self
+        }
+        
+        private func setupConstraints() {
+            NSLayoutConstraint.activate([
+                scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+                scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                
+                backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 8),
+                backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+                backButton.heightAnchor.constraint(equalToConstant: 44),
+                backButton.widthAnchor.constraint(equalToConstant: 44),
+                
+                shareButton.heightAnchor.constraint(equalToConstant: 50),
+                shareButton.widthAnchor.constraint(equalToConstant: 50),
+                shareButton.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+                shareButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -17)
+            ])
+        }
+    
     // MARK: - Actions
-    @IBAction private func didTapBackButton() {
+    @objc private func didTapBackButton() {
         dismiss(animated: true, completion: nil)
     }
     
-    @IBAction func didTapShareButton(_ sender: Any) {
+    @objc func didTapShareButton(_ sender: Any) {
         guard let image else { return }
         let share = UIActivityViewController(
             activityItems: [image],
@@ -92,6 +154,19 @@ final class SingleImageViewController: UIViewController {
 extension SingleImageViewController: UIScrollViewDelegate {
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
         return imageView
+    }
+    
+    // Этот метод срабатывает каждый раз, когда пальцы меняют масштаб
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        let offsetX = max((scrollView.bounds.width - scrollView.contentSize.width) * 0.5, 0)
+        let offsetY = max((scrollView.bounds.height - scrollView.contentSize.height) * 0.5, 0)
+        
+        scrollView.contentInset = UIEdgeInsets(
+            top: offsetY,
+            left: offsetX,
+            bottom: offsetY,
+            right: offsetX
+        )
     }
 }
 
