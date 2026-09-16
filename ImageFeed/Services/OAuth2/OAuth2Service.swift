@@ -37,35 +37,7 @@ class OAuth2Service {
         }
     }
 
-    // 💡 МЕТОД 1: Собирает POST-запрос с параметрами (client_id, secret, code) для обмена кода на токен
-    private func makeOAuthTokenRequest(code: String) -> URLRequest? {
-        guard var urlComponents = URLComponents(
-            string: WebViewConstants.unsplashTokenURLString
-        ) else {
-            print("[OAuth2Service] ❌ Ошибка: Не удалось создать URLComponents из строки: \(WebViewConstants.unsplashTokenURLString)")
-            return nil
-        }
-
-        urlComponents.queryItems = [
-            URLQueryItem(name: "client_id", value: Constants.accessKey),
-            URLQueryItem(name: "client_secret",value: Constants.secretKey),
-            URLQueryItem(name: "redirect_uri",value: Constants.redirectURI),
-            URLQueryItem(name: "code",value: code),
-            URLQueryItem(name: "grant_type",value: "authorization_code")
-        ]
-
-        guard let url = urlComponents.url else {
-            print("[OAuth2Service] ❌ Ошибка: Не удалось получить URL из urlComponents")
-            return nil
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-
-        return request
-    }
-
-    // 💡 МЕТОД 2: Отправляет запрос в сеть, забирает OAuth-токен и защищает от повторных дублирующих запросов (состояние гонки)
+    // 💡 МЕТОД 1: Отправляет запрос в сеть, забирает OAuth-токен и защищает от повторных дублирующих запросов (состояние гонки)
     func fetchAuthToken(_ code: String, completion: @escaping (Result<String, Error>) -> Void) {
         assert(Thread.isMainThread)
         
@@ -112,5 +84,33 @@ class OAuth2Service {
         }
         self.task = task
         task.resume()
+    }
+    
+    // 💡 МЕТОД 2: Собирает POST-запрос с параметрами (client_id, secret, code) для обмена кода на токен
+    private func makeOAuthTokenRequest(code: String) -> URLRequest? {
+        guard var urlComponents = URLComponents(
+            string: WebViewConstants.unsplashTokenURLString
+        ) else {
+            print("[OAuth2Service] ❌ Ошибка: Не удалось создать URLComponents из строки: \(WebViewConstants.unsplashTokenURLString)")
+            return nil
+        }
+
+        urlComponents.queryItems = [
+            URLQueryItem(name: "client_id", value: Constants.accessKey),
+            URLQueryItem(name: "client_secret",value: Constants.secretKey),
+            URLQueryItem(name: "redirect_uri",value: Constants.redirectURI),
+            URLQueryItem(name: "code",value: code),
+            URLQueryItem(name: "grant_type",value: "authorization_code")
+        ]
+
+        guard let url = urlComponents.url else {
+            print("[OAuth2Service] ❌ Ошибка: Не удалось получить URL из urlComponents")
+            return nil
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        return request
     }
 }
