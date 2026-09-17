@@ -8,6 +8,7 @@
 import UIKit
 
 final class ImagesListViewController: UIViewController {
+    private let imagesListService = ImagesListService()
     
     // 1. Создаём константу для имени перехода в одном месте
     private let showSingleImageSegueIdentifier = "ShowSingleImage"
@@ -57,30 +58,10 @@ final class ImagesListViewController: UIViewController {
         ])
     }
     
-    // 2. Метод подготовки к переходу
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Сравниваем с нашей константой
-        if segue.identifier == showSingleImageSegueIdentifier {
-            
-            // Безопасно разворачиваем новый экран и индекс нажатой ячейки
-            guard
-                let viewController = segue.destination as? SingleImageViewController,
-                let indexPath = sender as? IndexPath
-            else {
-                assertionFailure("Invalid segue destination")
-                return
-            }
-            
-            // Достаем картинку из массива по индексу
-            let image = UIImage(named: photosName[indexPath.row])
-            
-            // ЧЕСТНОЕ РЕШЕНИЕ: кладем картинку в простую промежуточную переменную image
-            viewController.image = image
-            
-        } else {
-            super.prepare(for: segue, sender: sender)
-        }
-    
+//    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+//        if indexPath.row + 1 == photosName.count {
+//            imagesListService.fetchPhotosNextPage()
+//        }
     }
 
     // MARK: - Private Methods

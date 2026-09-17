@@ -63,10 +63,7 @@ final class ProfileService {
             switch result {
             case .success(let result):
                 let lastName = result.lastName ?? ""
-                let profile = Profile(
-                    username: result.username,
-                    name: "\(result.firstName) \(lastName)"
-                        .trimmingCharacters(in: .whitespaces), // Убираем лишние пробелы
+                let profile = Profile(username: result.username, name: "\(result.firstName) \(lastName)".trimmingCharacters(in: .whitespaces), // Убираем лишние пробелы
                     loginName: "@\(result.username)",
                     bio: result.bio
                 )
