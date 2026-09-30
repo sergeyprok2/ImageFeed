@@ -80,6 +80,10 @@ final class ProfileService {
         self.task = task
         task.resume()
     }
+    
+    func clear() {
+        profile = nil
+    }
 
     // 💡 МЕТОД 2: Собирает URL-запрос к эндпоинту /me и подставляет заголовок с токеном авторизации Bearer
     private func makeProfileRequest(token: String) -> URLRequest? {
@@ -92,4 +96,6 @@ final class ProfileService {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         return request
     }
+    
+    
 }

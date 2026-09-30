@@ -3,6 +3,7 @@
 
 import UIKit
 import WebKit
+import ProgressHUD
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -22,6 +23,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 //            }
 //        }
 //        print("================================")
+        
+        ProgressHUD.animationType = .activityIndicator
+        ProgressHUD.colorHUD = .white
+        ProgressHUD.colorAnimation = .black
+        
         configureTabBarAppearance()
         // Override point for customization after application launch.
         return true

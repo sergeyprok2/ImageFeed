@@ -82,19 +82,19 @@ final class AuthViewController: UIViewController {
     }
 
     // 💡 НАВИГАЦИЯ: Подготавливает переход на WebViewViewController и назначает себя его делегатом
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        guard segue.identifier == showWebViewSegueIdentifier else {
-            super.prepare(for: segue, sender: sender)
-            return
-        }
-
-        guard let webViewViewController = segue.destination as? WebViewViewController else {
-            assertionFailure("Failed to prepare for \(showWebViewSegueIdentifier)")
-            return
-        }
-
-        webViewViewController.delegate = self
-    }
+//    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+//        guard segue.identifier == showWebViewSegueIdentifier else {
+//            super.prepare(for: segue, sender: sender)
+//            return
+//        }
+//
+//        guard let webViewViewController = segue.destination as? WebViewViewController else {
+//            assertionFailure("Failed to prepare for \(showWebViewSegueIdentifier)")
+//            return
+//        }
+//
+//        webViewViewController.delegate = self
+//    }
 
     // 💡 ВНЕШНИЙ ВИД: Настраивает кастомную иконку и внешний вид кнопки «Назад»
     private func configureBackButton() {
@@ -111,8 +111,7 @@ final class AuthViewController: UIViewController {
             action: nil
         )
 
-        navigationItem.backBarButtonItem?.tintColor =
-            UIColor(named: "ypBlack")
+        navigationItem.backBarButtonItem?.tintColor = UIColor(named: "YP Black (iOS)")
     }
 }
 
