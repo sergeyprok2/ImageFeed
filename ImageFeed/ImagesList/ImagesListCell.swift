@@ -121,10 +121,8 @@ final class ImagesListCell: UITableViewCell {
                 
                 switch result {
                 case .success:
-                    print("")
                     self.setIsHidden(false)
                 case .failure(_):
-                    print("")
                     self.setIsHidden(false)
                 }
             }
