@@ -136,7 +136,9 @@ final class ProfileViewController: UIViewController {
     // MARK: - Actions
     
     // 💡 ДЕЙСТВИЕ: Обработчик нажатия на кнопку логаута
-    @objc private func didTapLogoutButton() {}
+    @objc private func didTapLogoutButton() {
+        showExit()
+    }
     
     // MARK: - Setup UI
     
@@ -174,5 +176,18 @@ final class ProfileViewController: UIViewController {
             logoutButton.heightAnchor.constraint(equalToConstant: 44),
             logoutButton.widthAnchor.constraint(equalToConstant: 44)
         ])
+    }
+    
+    func showExit() {
+        let alertController = UIAlertController(
+            title: "Пока, пока!",
+            message: "Уверены, что хотите выйти?",
+            preferredStyle: .alert
+        )
+        let noAction = UIAlertAction(title: "Нет", style: .cancel, handler: nil)
+        let yesAction = UIAlertAction(title: "Да", style: .default, handler:{_ in  ProfileLogoutService.shared.logout() })
+        alertController.addAction(noAction)
+        alertController.addAction(yesAction)
+        present(alertController, animated: true, completion: nil)
     }
 }

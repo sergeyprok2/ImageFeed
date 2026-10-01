@@ -11,20 +11,11 @@
 // 5. viewForZooming(in:) — метод протокола `UIScrollViewDelegate`, указывающий `imageView` как объект для зуминга.
 
 import UIKit
+import Kingfisher
 
 final class SingleImageViewController: UIViewController {
-
-    // 1. Промежуточная переменная-коробка для картинки
-    var image: UIImage? {
-        didSet {
-            // Если экран ЕЩЁ не загружен в память — ничего не делаем, ждем viewDidLoad.
-            // Если экран УЖЕ показан на экране — сразу обновляем картинку в imageView.
-            guard isViewLoaded, let image = image else { return }
-            imageView.image = image
-            imageView.frame.size = image.size
-            rescaleAndCenterImageInScrollView(image: image)
-        }
-    }
+    
+    var fullImageURL: URL?
     
     private let imageView: UIImageView = {
         let imageView = UIImageView()
@@ -68,11 +59,7 @@ final class SingleImageViewController: UIViewController {
         // Когда экран сам загрузился в память, он берет картинку из коробки `image`
         // и кладёт её в `imageView`
         // Если картинку передали ДО загрузки экрана — отображаем и центрируем ее
-        if let image = image {
-            imageView.image = image
-            imageView.frame.size = image.size
-            rescaleAndCenterImageInScrollView(image: image)
-        }
+        fetchImage()
 
     }
     
@@ -110,7 +97,7 @@ final class SingleImageViewController: UIViewController {
     }
     
     @objc func didTapShareButton(_ sender: Any) {
-        guard let image else { return }
+        guard let image = imageView.image else { return }
         let share = UIActivityViewController(
             activityItems: [image],
             applicationActivities: nil
@@ -119,6 +106,35 @@ final class SingleImageViewController: UIViewController {
     }
     
     // MARK: - Private Methods
+    
+    private func fetchImage() {
+        UIBlockingProgressHUD.show()
+        imageView.kf.setImage(with: fullImageURL) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+            
+            guard let self = self else { return }
+            switch result {
+            case .success(let imageResult):
+                self.rescaleAndCenterImageInScrollView(image: imageResult.image)
+            case .failure:
+                self.showError()
+            }
+        }
+    }
+    
+    private func showError() {
+        let alertController = UIAlertController(
+            title: "Что-то пошло не так",
+            message: "Что-то пошло не так. Попробовать ещё раз?",
+            preferredStyle: .alert
+        )
+        let noAction = UIAlertAction(title: "Не надо", style: .cancel, handler: nil)
+        let resetAction = UIAlertAction(title: "Повторить", style: .default, handler:{ [weak self] _ in self?.fetchImage() })
+        alertController.addAction(noAction)
+        alertController.addAction(resetAction)
+        present(alertController, animated: true, completion: nil)
+    }
+    
     // Алгоритм рескейла и центрирования
     private func rescaleAndCenterImageInScrollView(image: UIImage) {
         // Сбрасываем скейл и сдвиг по умолчанию

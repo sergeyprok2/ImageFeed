@@ -63,10 +63,7 @@ final class ProfileService {
             switch result {
             case .success(let result):
                 let lastName = result.lastName ?? ""
-                let profile = Profile(
-                    username: result.username,
-                    name: "\(result.firstName) \(lastName)"
-                        .trimmingCharacters(in: .whitespaces), // Убираем лишние пробелы
+                let profile = Profile(username: result.username, name: "\(result.firstName) \(lastName)".trimmingCharacters(in: .whitespaces), // Убираем лишние пробелы
                     loginName: "@\(result.username)",
                     bio: result.bio
                 )
@@ -83,6 +80,10 @@ final class ProfileService {
         self.task = task
         task.resume()
     }
+    
+    func clear() {
+        profile = nil
+    }
 
     // 💡 МЕТОД 2: Собирает URL-запрос к эндпоинту /me и подставляет заголовок с токеном авторизации Bearer
     private func makeProfileRequest(token: String) -> URLRequest? {
@@ -95,4 +96,6 @@ final class ProfileService {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         return request
     }
+    
+    
 }

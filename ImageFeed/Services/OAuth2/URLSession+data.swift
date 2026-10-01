@@ -14,10 +14,13 @@ import Foundation
 //  fulfillCompletionOnTheMainThread — форсирует возврат ответа в DispatchQueue.main, чтобы UI не падал при обновлении.
 
 // 💡 ОШИБКИ: Перечисление всех возможных сетевых ошибок для удобной обработки
+import Foundation
+
+// MARK: - Ошибки
 enum NetworkError: Error {
-    case httpStatusCode(Int)      // Сервер вернул плохой статус-код (например, 400, 401, 500)
+    case httpStatusCode(Int)      // Сервер вернул плохой статус-код
     case urlRequestError(Error)   // Ошибка самого запроса или отсутствие сети
-    case urlSessionError          // Ошибка URLSession (не пришли ни данные, ни ошибка)
+    case urlSessionError          // Ошибка URLSession
     case invalidRequest           // Некорректный URLRequest
     case decodingError(Error)     // Ошибка парсинга JSON
 }
@@ -26,32 +29,32 @@ enum NetworkError: Error {
 
 extension URLSession {
     
-    // 💡 ХЕЛПЕР: Универсальный сетевой метод, который отправляет запрос, проверяет статус-код и гарантированно возвращает ответ в главном потоке (Main Thread)
     func data(for request: URLRequest, completion: @escaping (Result<Data, Error>) -> Void) -> URLSessionTask {
-        
-        // 💡 ЗАМЫКАНИЕ: Перенаправляет передачу результата (success/failure) в главный поток для безопасного обновления UI
         let fulfillCompletionOnTheMainThread: (Result<Data, Error>) -> Void = { result in
             DispatchQueue.main.async {
                 completion(result)
             }
         }
 
-        // 💡 ЗАПРОС: Запускает стандартный dataTask и обрабатывает ответы от сервера
         let task = dataTask(with: request) { data, response, error in
+            let urlString = request.url?.absoluteString ?? "Неизвестный URL"
+            
             if let data = data,
                let response = response,
                let statusCode = (response as? HTTPURLResponse)?.statusCode {
                 
-                // Проверяем, что статус-код успешный (от 200 до 299)
                 if 200..<300 ~= statusCode {
                     fulfillCompletionOnTheMainThread(.success(data))
                 } else {
-                    print(String(data: data, encoding: .utf8) ?? "")
+                    let rawData = String(data: data, encoding: .utf8) ?? "Нет данных"
+                    print("[data URLSession]: [Ошибка HTTP статуса \(statusCode)] [URL: \(urlString), Ответ: \(rawData)]")
                     fulfillCompletionOnTheMainThread(.failure(NetworkError.httpStatusCode(statusCode)))
                 }
             } else if let error = error {
+                print("[data URLSession]: [Ошибка сетевого запроса] [URL: \(urlString), Ошибка: \(error.localizedDescription)]")
                 fulfillCompletionOnTheMainThread(.failure(NetworkError.urlRequestError(error)))
             } else {
+                print("[data URLSession]: [Ошибка URLSession - нет данных и нет ошибки] [URL: \(urlString)]")
                 fulfillCompletionOnTheMainThread(.failure(NetworkError.urlSessionError))
             }
         }
@@ -59,38 +62,28 @@ extension URLSession {
         return task
     }
     
-    /// Создаёт задачу сетевого запроса и декодирует ответ сервера в тип `T`.
-    /// - Parameters:
-    ///   - request: Запрос `URLRequest`.
-    ///   - completion: Замыкание с результатом декодирования (`Result<T, Error>`).
-    /// - Returns: Созданная задача `URLSessionTask`.
-    ///
-    /// // Выполняет сетевой запрос и автоматически декодирует ответ в указанную модель T
-
-
-    func objectTask<T: Decodable>(for request: URLRequest,completion: @escaping (Result<T, Error>) -> Void) -> URLSessionTask {
+    func objectTask<T: Decodable>(
+        for request: URLRequest,
+        completion: @escaping (Result<T, Error>) -> Void
+    ) -> URLSessionTask {
         let decoder = JSONDecoder()
 
         let task = data(for: request) { (result: Result<Data, Error>) in
+            let urlString = request.url?.absoluteString ?? "Неизвестный URL"
+            
             switch result {
             case .success(let data):
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Полученные данные: \(jsonString)")
-                }
                 do {
                     let decodedObject = try decoder.decode(T.self, from: data)
                     completion(.success(decodedObject))
                 } catch {
-                    if let decodingError = error as? DecodingError {
-                        print("Ошибка декодирования: \(decodingError), Данные: \(String(data: data, encoding: .utf8) ?? "")")
-                    } else {
-                        print("Ошибка декодирования: \(error.localizedDescription), Данные: \(String(data: data, encoding: .utf8) ?? "")")
-                    }
-                    completion(.failure(error))
+                    let rawData = String(data: data, encoding: .utf8) ?? "Не удалось прочитать Data"
+                    print("[objectTask URLSession]: [Ошибка декодирования JSON] [URL: \(urlString), Ошибка: \(error), Данные: \(rawData)]")
+                    completion(.failure(NetworkError.decodingError(error)))
                 }
 
             case .failure(let error):
-                print("Ошибка запроса: \(error.localizedDescription)")
+                // Ошибка уже залогирована в методе data(for:), передаём failure дальше
                 completion(.failure(error))
             }
         }
