@@ -120,14 +120,45 @@ final class ImagesListViewController: UIViewController, ImagesListViewController
 extension ImagesListViewController: UITableViewDelegate {
     
     // Вызывается прямо перед тем, как ячейка отрисуется на экране. Используем для пагинации (бесконечного скролла)
-    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        if indexPath.row + 1 == presenter?.numberOfRows() {
-            // ставим спиннер перед второй и последующей загрузкой фотографий
-            UIBlockingProgressHUD.show()
-            presenter?.fetchPhotosNextPage()
-            
+    func tableView(
+        _ tableView: UITableView,
+        willDisplay cell: UITableViewCell,
+        forRowAt indexPath: IndexPath
+    ) {
+        guard let presenter else {
+            return
         }
+
+        // ДОБАВЛЕНО: не загружаем следующую страницу,
+        // если контент ещё не превышает высоту таблицы
+        guard tableView.contentSize.height > tableView.bounds.height else {
+            return
+        }
+
+        // ДОБАВЛЕНО: проверяем, что таблица действительно скроллится
+        guard tableView.isDragging ||
+              tableView.isDecelerating ||
+              tableView.isTracking else {
+            return
+        }
+
+        // ОСТАЛОСЬ: загружаем только при отображении последней ячейки
+        guard indexPath.row + 1 == presenter.numberOfRows() else {
+            return
+        }
+
+        // ДОБАВЛЕНО: проверяем, что пользователь действительно почти достиг низа
+        let currentOffset = tableView.contentOffset.y
+        let visibleHeight = tableView.bounds.height
+        let contentHeight = tableView.contentSize.height
+
+        guard currentOffset + visibleHeight >= contentHeight - 100 else {
+            return
+        }
+
+        presenter.fetchPhotosNextPage()
     }
+
     
     // Обработка нажатия на ячейку: снимаем выделение и открываем полноэкранный просмотр
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {

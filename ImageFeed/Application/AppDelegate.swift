@@ -11,7 +11,19 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
 //        #warning("Закомментировать сброс!")
-//        OAuth2TokenStorage.shared.token = nil; WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast, completionHandler: {}) // Сброс для тестов
+        if CommandLine.arguments.contains("-resetAuth") {
+            OAuth2TokenStorage.shared.token = nil
+
+            WKWebsiteDataStore.default().removeData(
+                ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
+                modifiedSince: .distantPast,
+//                completionHandler: {}
+            ) {
+                DispatchQueue.main.async {
+                    print("Данные WebView очищены")
+                }
+            }
+        } // Сброс для тестов
 
 //        print("=== ВСЕ КЛЮЧИ В USERDEFAULTS AppDelegate ===")
 //        let allDictionary = UserDefaults.standard.dictionaryRepresentation()

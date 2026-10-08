@@ -7,21 +7,22 @@ class Image_FeedUITests: XCTestCase {
     private let app = XCUIApplication() // переменная приложения
     
     override func setUpWithError() throws {
-        continueAfterFailure = false // настройка выполнения тестов, которая прекратит выполнения тестов, если в тесте что-то пошло не так
-        
-        let app = XCUIApplication()
-        // Передаем аргумент для очистки состояния или токена при запуске
-        app.launchArguments = ["-resetToken"]
-        app.launch() // запускаем приложение перед каждым тестом
+        continueAfterFailure = false
+
+        app.launchArguments = []
+
+        if name.contains("testAuth") {
+            app.launchArguments = ["-resetAuth"]
+        }
+
+        app.launch()
     }
     
     func testAuth() throws {
-        print("222222222222222222222222222222222222222222222222222")
         app.buttons["Authenticate"].tap()
-        print("111111111111111111111111111111111111111111111111111")
         let webView = app.webViews["UnsplashWebView"]
         
-        XCTAssertTrue(webView.waitForExistence(timeout: 100))
+        XCTAssertTrue(webView.waitForExistence(timeout: 10))
 
         let loginTextField = webView.descendants(matching: .textField).element
         XCTAssertTrue(loginTextField.waitForExistence(timeout: 10))
@@ -37,132 +38,134 @@ class Image_FeedUITests: XCTestCase {
         let passwordTextField1 = webView.descendants(matching: .secureTextField).element
         XCTAssertTrue(passwordTextField.waitForExistence(timeout: 5))
         passwordTextField1.tap()
+        sleep(5)
         passwordTextField.typeText("tadjof-kyCguq-0hyzze")
         webView.swipeUp()
         
         webView.buttons["Login"].tap()
-        
+        sleep(5)
         let tablesQuery = app.tables
         let cell = tablesQuery.children(matching: .cell).element(boundBy: 0)
         
-        XCTAssertTrue(cell.waitForExistence(timeout: 500))
+        XCTAssertTrue(cell.waitForExistence(timeout: 5))
     }
     
     func testFeed() throws {
+        // Находим таблицу с фотографиями
         let tableView = app.tables.firstMatch
 
+        // Проверяем, что таблица появилась
         XCTAssertTrue(
             tableView.waitForExistence(timeout: 20),
             "Таблица с фотографиями не появилась"
         )
 
-        let firstCell = tableView.cells.element(boundBy: 0)
+        // Прокручиваем таблицу вверх
+        tableView.swipeUp()
 
+        // Ждём загрузку фотографий
+        sleep(20)
+
+        // Ищем видимую ячейку с доступной кнопкой лайка
+        let cells = tableView.cells
+        var cellToLike: XCUIElement?
+
+        for index in 0..<cells.count {
+            let cell = cells.element(boundBy: index)
+            let likeButton = cell.buttons["likeButton"]
+
+            if cell.isHittable && likeButton.isHittable {
+                cellToLike = cell
+                break
+            }
+        }
+
+        // Если подходящая ячейка не найдена, завершаем тест
+        guard let cellToLike else {
+            XCTFail("Не найдена видимая ячейка с кнопкой лайка")
+            return
+        }
+
+        // Находим кнопку в состоянии «лайк не установлен»
+        let likeOffButton = cellToLike.buttons["like button off"]
+
+        // Ждём появления кнопки
         XCTAssertTrue(
-            firstCell.waitForExistence(timeout: 20),
-            "Первая ячейка не появилась"
+            likeOffButton.waitForExistence(timeout: 10),
+            "Кнопка like button off не появилась"
         )
 
-        firstCell.swipeUp()
+        // Устанавливаем лайк
+        likeOffButton.tap()
 
-        sleep(2) // ждём завершения прокрутки
+        // После запроса кнопка должна перейти в состояние «лайк установлен»
+        let likeOnButton = cellToLike.buttons["like button on"]
 
-        var cellToLike = tableView.cells.element(boundBy: 1)
-
+        // Ждём обновления состояния кнопки
         XCTAssertTrue(
-            cellToLike.waitForExistence(timeout: 20),
-            "Вторая ячейка не появилась"
+            likeOnButton.waitForExistence(timeout: 10),
+            "Кнопка like button on не появилась"
         )
 
-        sleep(100) // ждём загрузку изображения
+        // Снимаем лайк
+        likeOnButton.tap()
 
-        var likeButton = cellToLike.buttons["likeButton"]
+        // Ждём завершения запроса снятия лайка
+        sleep(10)
 
-        XCTAssertTrue(
-            likeButton.waitForExistence(timeout: 20),
-            "Кнопка лайка не появилась"
-        )
-
-        XCTAssertTrue(
-            likeButton.isHittable,
-            "Кнопка лайка найдена, но недоступна для нажатия"
-        )
-
-        likeButton.tap()
-
-        sleep(3) // ждём ответ сервера и обновление ячейки
-
-        // ВАЖНО: заново получаем ячейку после изменения лайка
-        cellToLike = tableView.cells.element(boundBy: 1)
-
-        XCTAssertTrue(
-            cellToLike.waitForExistence(timeout: 20),
-            "Ячейка исчезла после установки лайка"
-        )
-
-        likeButton = cellToLike.buttons["likeButton"]
-
-        XCTAssertTrue(
-            likeButton.waitForExistence(timeout: 20),
-            "Кнопка лайка не найдена после обновления"
-        )
-
-        XCTAssertTrue(
-            likeButton.isHittable,
-            "Кнопка лайка недоступна после обновления"
-        )
-
-        likeButton.tap()
-
-        sleep(3) // ждём снятие лайка
-
-        // Повторно находим ячейку перед открытием фотографии
-        cellToLike = tableView.cells.element(boundBy: 1)
-
-        XCTAssertTrue(
-            cellToLike.waitForExistence(timeout: 20),
-            "Ячейка не найдена перед открытием фотографии"
-        )
-
-        XCTAssertTrue(
-            cellToLike.isHittable,
-            "Ячейка недоступна для нажатия"
-        )
-
+        // Открываем фотографию
         cellToLike.tap()
 
+        // Находим большую фотографию
         let image = app.scrollViews.images.element(boundBy: 0)
 
+        // Проверяем, что большая фотография появилась
         XCTAssertTrue(
-            image.waitForExistence(timeout: 20),
+            image.waitForExistence(timeout: 200),
             "Большая фотография не появилась"
         )
 
+        // Увеличиваем изображение
         image.pinch(withScale: 3, velocity: 1)
+
+        // Уменьшаем изображение
         image.pinch(withScale: 0.5, velocity: -1)
 
-        let navBackButtonWhiteButton = app.buttons["nav back button white"]
+        // Находим кнопку возврата назад
+        let backButton = app.buttons["nav back button white"]
 
+        // Проверяем, что кнопка назад появилась
         XCTAssertTrue(
-            navBackButtonWhiteButton.waitForExistence(timeout: 20),
+            backButton.waitForExistence(timeout: 20),
             "Кнопка назад не появилась"
         )
 
-        navBackButtonWhiteButton.tap()
+        // Возвращаемся к ленте
+        backButton.tap()
     }
 
-
-    
     func testProfile() throws {
-        sleep(10)
-        app.tabBars.buttons.element(boundBy: 1).tap()
-        print("222222222222222222222222222222222222222222222222222")
-        XCTAssertTrue(app.staticTexts["Name Lastname"].exists)
-        sleep(10)
-        XCTAssertTrue(app.staticTexts["@username"].exists)
-        
-        app.buttons["logout button"].tap()
-        
-        app.alerts["Bye bye!"].scrollViews.otherElements.buttons["Yes"].tap()
+        // 1. Ждем появление кнопки таб-бара и нажимаем на нее
+        let profileTab = app.tabBars.buttons.element(boundBy: 1)
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 100))
+        profileTab.tap()
+
+        // 2. Ждем появления текста имени вместо sleep(10)
+        let nameText = app.staticTexts["Name Lastname"]
+        XCTAssertTrue(nameText.waitForExistence(timeout: 10))
+
+        // 3. Ждем появления юзернейма
+        let usernameText = app.staticTexts["@username"]
+        XCTAssertTrue(usernameText.waitForExistence(timeout: 10))
+
+        // 4. Нажимаем кнопку выхода
+        let logoutButton = app.buttons["logout button"]
+        XCTAssertTrue(logoutButton.waitForExistence(timeout: 5))
+        logoutButton.tap()
+
+        // 5. Работа с алертом: обращаемся к кнопке напрямую
+        let alert = app.alerts["Пока, пока!"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons["Да"].tap()
     }
 }

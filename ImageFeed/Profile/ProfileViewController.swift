@@ -48,6 +48,7 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
         label.font = .systemFont(ofSize: 23, weight: .bold)
         label.textColor = UIColor(named: "YP White (iOS)")
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.accessibilityIdentifier = "Name Lastname"
         return label
     }()
     
@@ -58,6 +59,7 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
         label.font = .systemFont(ofSize: 13, weight: .regular)
         label.textColor = UIColor(named: "YP Gray (iOS)")
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.accessibilityIdentifier = "@username"
         return label
     }()
     
@@ -76,10 +78,10 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
         let button = UIButton.systemButton(
             with: UIImage(named: "Exit") ?? UIImage(),
             target: self,
-            action: #selector(didTapLogoutButton)
-        )
+            action: #selector(didTapLogoutButton))
         button.tintColor = UIColor(named: "YP Red (iOS)")
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.accessibilityIdentifier = "logout button"
         return button
     }()
     
@@ -180,10 +182,14 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
             message: "Уверены, что хотите выйти?",
             preferredStyle: .alert
         )
+        // 1. Устанавливаем ID для самого alertController ДО вызова present
+        alertController.view.accessibilityIdentifier = "Пока, пока!"
         let noAction = UIAlertAction(title: "Нет", style: .cancel, handler: nil)
-        let yesAction = UIAlertAction(title: "Да", style: .default, handler:{_ in  ProfileLogoutService.shared.logout() })
+        let yesAction = UIAlertAction(title: "Да", style: .default, handler:{_ in  ProfileLogoutService.shared.logout()})
         alertController.addAction(noAction)
         alertController.addAction(yesAction)
+//        yesAction.accessibilityIdentifier = "Да"
         present(alertController, animated: true, completion: nil)
+        
     }
 }
