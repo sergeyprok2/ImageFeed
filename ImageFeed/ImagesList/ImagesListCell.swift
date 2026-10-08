@@ -48,6 +48,7 @@ final class ImagesListCell: UITableViewCell {
     private let likeButton: UIButton = {
         let likeButton = UIButton()
         likeButton.translatesAutoresizingMaskIntoConstraints = false
+        likeButton.accessibilityIdentifier = "likeButton"
         return likeButton
     }()
     
@@ -192,8 +193,12 @@ final class ImagesListCell: UITableViewCell {
         } else {
             stubImageView.isHidden = true
             likeButton.isHidden = false
+            likeButton.isUserInteractionEnabled = true // ДОБАВЛЕНО
             dateLabel.isHidden = false
             gradientView.isHidden = false
+            
+            print("like hidden:", likeButton.isHidden) // ДОБАВЛЕНО
+            print("like frame:", likeButton.frame) // ДОБАВЛЕНО
         }
     }
     

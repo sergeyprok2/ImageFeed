@@ -89,9 +89,9 @@ class OAuth2Service {
     // 💡 МЕТОД 2: Собирает POST-запрос с параметрами (client_id, secret, code) для обмена кода на токен
     private func makeOAuthTokenRequest(code: String) -> URLRequest? {
         guard var urlComponents = URLComponents(
-            string: WebViewConstants.unsplashTokenURLString
+            string: Constants.unsplashTokenURLString
         ) else {
-            print("[OAuth2Service] ❌ Ошибка: Не удалось создать URLComponents из строки: \(WebViewConstants.unsplashTokenURLString)")
+            print("[OAuth2Service] ❌ Ошибка: Не удалось создать URLComponents из строки: \(Constants.unsplashTokenURLString)")
             return nil
         }
 

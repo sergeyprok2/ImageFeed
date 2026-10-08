@@ -14,15 +14,21 @@
 /// Не делает сетевые запросы сам, а использует ImagesListService.
 
 import UIKit
-import Kingfisher
+//import Kingfisher
 
-final class ImagesListViewController: UIViewController {
+protocol ImagesListViewControllerProtocol: AnyObject {
+    var presenter: ImagesListPresenterProtocol? { get set}
+    func updateTableViewAnimated()
+    func updateLikeCell(at indexPath: IndexPath, isLiked: Bool)
+}
+
+final class ImagesListViewController: UIViewController, ImagesListViewControllerProtocol {
+    
+    var presenter: ImagesListPresenterProtocol?
     
     // MARK: - Private Properties
     
     private let imagesListCell = ImagesListCell()
-    private let imagesListService = ImagesListService()
-    private var photos: [Photo] = []
     private var imagesListServiceObserver: NSObjectProtocol?
 
     private let tableView: UITableView = {
@@ -44,20 +50,10 @@ final class ImagesListViewController: UIViewController {
         setupUI()
         setupConstraints()
         
-        // Подписываемся на уведомления от сервиса, чтобы обновлять таблицу при приходе новых данных
-        imagesListServiceObserver = NotificationCenter.default.addObserver(
-            forName: ImagesListService.didChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            UIBlockingProgressHUD.dismiss()
-            self?.updateTableViewAnimated()
-        }
-        
         // ставим спиннер перед первой загрузкой фотографий
         UIBlockingProgressHUD.show()
         // Запрашиваем самую первую страницу фотографий с сервера
-        imagesListService.fetchPhotosNextPage()
+        presenter?.fetchPhotosNextPage()
     }
     
     // MARK: - UI Setup
@@ -85,9 +81,9 @@ final class ImagesListViewController: UIViewController {
     
     // Анимированное добавление новых строк в таблицу при получении очередной порции фото
     func updateTableViewAnimated() {
-        let oldCount = photos.count
-        let newCount = imagesListService.photos.count
-        photos = imagesListService.photos
+        let oldCount = presenter?.numberOfRowsOldCount() ?? 0
+        let newCount = presenter?.numberOfRows() ?? 0
+        
         if oldCount != newCount {
             tableView.performBatchUpdates {
                 var indexPaths: [IndexPath] = []
@@ -102,11 +98,20 @@ final class ImagesListViewController: UIViewController {
     // Наполнение отдельной ячейки данными (картинка, дата, кнопка лайка)
     private func configCell(for cell: ImagesListCell, with indexPath: IndexPath) {
         
-        let photo = photos[indexPath.row]
+        guard let photo = presenter?.photo(at: indexPath) else { return }
         
  
 //        let isLiked = indexPath.row % 2 == 0
         cell.configure(photo: photo)
+    }
+    
+    func updateLikeCell(at indexPath: IndexPath, isLiked: Bool) {
+        if let currentCell = tableView.cellForRow(at: indexPath) as? ImagesListCell {
+            print("3. [VC] Ячейка найдена по indexPath, вызываем setIsLiked(\(isLiked))")
+            currentCell.setIsLiked(isLiked)
+        } else {
+            print("⚠️ [VC] Ошибка: cellForRow(at: \(indexPath)) вернул nil! Таблица не видит эту ячейку.")
+        }
     }
 }
 
@@ -116,17 +121,18 @@ extension ImagesListViewController: UITableViewDelegate {
     
     // Вызывается прямо перед тем, как ячейка отрисуется на экране. Используем для пагинации (бесконечного скролла)
     func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        if indexPath.row + 1 == photos.count {
+        if indexPath.row + 1 == presenter?.numberOfRows() {
             // ставим спиннер перед второй и последующей загрузкой фотографий
             UIBlockingProgressHUD.show()
-            imagesListService.fetchPhotosNextPage()
+            presenter?.fetchPhotosNextPage()
             
         }
     }
     
     // Обработка нажатия на ячейку: снимаем выделение и открываем полноэкранный просмотр
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let photo = photos[indexPath.row]
+        guard let photo = presenter?.photo(at: indexPath) else { return }
+//        let photo = photos[indexPath.row]
         
         // 💡 Вот здесь сразу видим точный размер в пикселях:
         print("Нажали на фото: \(Int(photo.size.width)) × \(Int(photo.size.height)) px")
@@ -143,7 +149,8 @@ extension ImagesListViewController: UITableViewDelegate {
 
     // Расчет высоты ячейки, чтобы картинка пропорционально вписалась по ширине экрана
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        let photo = photos[indexPath.row]
+        guard let photo = presenter?.photo(at: indexPath) else { return 0 }
+//        let photo = presenter?.photo(at:indexPath)
         let imageInsets = UIEdgeInsets(top: 4, left: 16, bottom: 4, right: 16)
         let imageViewWidth = tableView.bounds.width - imageInsets.left - imageInsets.right
         let imageWidth = photo.size.width
@@ -159,11 +166,14 @@ extension ImagesListViewController: UITableViewDataSource {
     
     // Спрашивает у нас: «Сколько всего строк нарисовать в таблице?»
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return photos.count
-    }
+            let count = presenter?.numberOfRows() ?? 0
+            print("📊 Таблица спрашивает количество строк: \(count)")
+            return count
+        }
     
     // Спрашивает у нас: «Дай мне готовую и заполненную ячейку для конкретной строки»
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        print("🎨 Таблица запрашивает ячейку для индекса: \(indexPath.row)")
         let cell = tableView.dequeueReusableCell(withIdentifier: ImagesListCell.reuseIdentifier, for: indexPath)
         cell.selectionStyle = .none
             
@@ -177,37 +187,15 @@ extension ImagesListViewController: UITableViewDataSource {
 }
 
 extension ImagesListViewController: ImagesListCellDelegate {
+    
+    // метод делегата ячейки, где обрабатывается нажатие на кнопку лайка
     func imageListCellDidTapLike(_ cell: ImagesListCell) {
         guard let indexPath = tableView.indexPath(for: cell) else { return }
-        let photo = photos[indexPath.row]
+        guard let photo = presenter?.photo(at: indexPath) else { return }
         
         print("1. [VC] Нажали лайк для фото id: \(photo.id), текущий isLiked: \(photo.isLiked)")
         UIBlockingProgressHUD.show()
         
-        imagesListService.changeLike(photoId: photo.id, isLike: !photo.isLiked) { [weak self] result in
-            guard let self = self else { return }
-            
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    self.photos = self.imagesListService.photos
-                    let newIsLiked = self.photos[indexPath.row].isLiked
-                    print("2. [VC] Успех сети! Новое значение из массива: \(newIsLiked)")
-                    
-                    if let currentCell = self.tableView.cellForRow(at: indexPath) as? ImagesListCell {
-                        print("3. [VC] Ячейка найдена по indexPath, вызываем setIsLiked(\(newIsLiked))")
-                        currentCell.setIsLiked(newIsLiked)
-                    } else {
-                        print("⚠️ [VC] Ошибка: cellForRow(at: \(indexPath)) вернул nil! Таблица не видит эту ячейку.")
-                    }
-                    
-                    UIBlockingProgressHUD.dismiss()
-                    
-                case .failure(let error):
-                    UIBlockingProgressHUD.dismiss()
-                    print("❌ [VC] Ошибка запроса: \(error)")
-                }
-            }
-        }
+        presenter?.didTapLike(at: indexPath)
     }
 }

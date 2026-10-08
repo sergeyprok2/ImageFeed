@@ -35,6 +35,8 @@ final class AuthViewController: UIViewController {
         button.layer.cornerRadius = 16
         button.titleLabel?.font = UIFont.systemFont(ofSize: 17, weight: .bold)
         button.translatesAutoresizingMaskIntoConstraints = false
+//        button.isAccessibilityElement = true
+        button.accessibilityIdentifier = "Authenticate"
         return button
     }()
     
@@ -78,6 +80,13 @@ final class AuthViewController: UIViewController {
     @objc private func didTapButton() {
         let webViewViewController = WebViewViewController()
         webViewViewController.delegate = self
+        
+        let authHelper = AuthHelper()
+        let webViewPresenter = WebViewPresenter(authHelper: authHelper)
+        webViewViewController.presenter = webViewPresenter
+        webViewPresenter.view = webViewViewController
+        webViewViewController.delegate = self
+        
         navigationController?.pushViewController(webViewViewController, animated: true)
     }
 

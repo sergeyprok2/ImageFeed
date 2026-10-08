@@ -13,12 +13,21 @@
 import UIKit
 import Kingfisher
 
-final class ProfileViewController: UIViewController {
+protocol ProfileViewControllerProtocol: AnyObject {
+    var presenter: ProfilePresenterProtocol? { get set}
+    func updateAvatar(url: URL?)
+    func updateProfileDetails(profile: Profile)
+    func showExit()
+}
+
+final class ProfileViewController: UIViewController, ProfileViewControllerProtocol {
     
-    private var profileImageServiceObserver: NSObjectProtocol?
+    var presenter: ProfilePresenterProtocol?
+    
+    
     
     // 💡 СЕРВИС: Экземпляр синглтона для доступа к сохраненным данным профиля
-    private let profileService = ProfileService.shared
+//    private let profileService = ProfileService.shared
     
     // MARK: - UI Components
     
@@ -82,28 +91,15 @@ final class ProfileViewController: UIViewController {
         view.backgroundColor = UIColor(named: "YP Black (iOS)")
         setupSubviews()
         setupConstraints()
-        if let profile = ProfileService.shared.profile {
-            updateProfileDetails(profile: profile)
-        }
-        profileImageServiceObserver = NotificationCenter.default
-            .addObserver(
-                forName: ProfileImageService.didChangeNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                guard let self = self else { return }
-                self.updateAvatar()
-            }
-        updateAvatar()
+//        if let profile = ProfileService.shared.profile {
+//            updateProfileDetails(profile: profile)
+//        }
+        presenter?.viewDidLoad()
+
     }
 
-    private func updateAvatar() {
-        guard
-            let profileImageURL = ProfileImageService.shared.avatarURL,
-            let url = URL(string: profileImageURL)
-        else {
-            print("DEBUG: Ссылка на аватарку пустая или nil")
-            return }
+    func updateAvatar(url: URL?) {
+        
         print("DEBUG: Загружаем аватарку по URL: \(url)")
         // 2. Настраиваем индикатор у свойства
         avatarImageView.kf.indicatorType = .activity
@@ -117,11 +113,11 @@ final class ProfileViewController: UIViewController {
             ]
         )
     }
-    
-    // MARK: - Private Methods
-    
-    // 💡 ВНЕШНИЙ ВИД: Заполняет UI-элементы настоящими данными из объекта Profile (или фоллбэками)
-    private func updateProfileDetails(profile: Profile) {
+//    
+//    // MARK: - Private Methods
+//    
+//    // 💡 ВНЕШНИЙ ВИД: Заполняет UI-элементы настоящими данными из объекта Profile (или фоллбэками)
+    func updateProfileDetails(profile: Profile) {
         nameLabel.text = profile.name.isEmpty
             ? "Имя не указано"
             : profile.name
@@ -137,7 +133,7 @@ final class ProfileViewController: UIViewController {
     
     // 💡 ДЕЙСТВИЕ: Обработчик нажатия на кнопку логаута
     @objc private func didTapLogoutButton() {
-        showExit()
+        presenter?.didTapLogoutButton()
     }
     
     // MARK: - Setup UI

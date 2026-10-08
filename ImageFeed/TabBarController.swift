@@ -28,6 +28,15 @@ final class TabBarController: UITabBarController {
             selectedImage: nil
         )
         
+        let imagesListPresenter = ImagesListPresenter()
+        imagesListViewController.presenter = imagesListPresenter
+        imagesListPresenter.view = imagesListViewController
+        
+        let profilePresenter = ProfilePresenter()
+        profileViewController.presenter = profilePresenter
+        profilePresenter.view = profileViewController
+//        profileViewController.delete(profilePresenter)
+        
         // 3. Назначение дочерних контроллеров
         self.viewControllers = [imagesListViewController, profileViewController]
     }
