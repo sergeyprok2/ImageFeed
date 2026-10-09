@@ -1,23 +1,45 @@
-//
-//
+/// **Ячейка таблицы для отображения фотографии в ленте (Слой представления / View)**
+///
+/// **За что отвечает:**
+/// Кастомная ячейка `UITableViewCell`, предназначенная для отрисовки карточки фотографии
+/// в ленте `ImagesListViewController`. Отображает изображение, дату публикации, градиентную
+/// подложку и кнопку лайка, а также управляет состояниями загрузки с помощью заглушки.
 
 import UIKit
 import Kingfisher
 
+// MARK: - Delegate Protocol
+
+/// Протокол для обработки событий ячейки списком фотографий
 protocol ImagesListCellDelegate: AnyObject {
+    /// Уведомляет делегат о нажатии на кнопку лайка в ячейке
     func imageListCellDidTapLike(_ cell: ImagesListCell)
 }
 
+// MARK: - ImagesListCell
+
 final class ImagesListCell: UITableViewCell {
-    
-    weak var delegate: ImagesListCellDelegate?
-    
-    // MARK: - Reuse Identifier
-    // Идентификатор ячейки для регистрации и переиспользования в таблице
+
+    // MARK: - Static Properties
+
+    /// Идентификатор ячейки для регистрации и переиспользования в таблице
     static let reuseIdentifier = "ImagesListCell"
 
+    /// Форматтер для превращения даты в читаемую строку
+    private static var dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
+    // MARK: - Public Properties
+
+    weak var delegate: ImagesListCellDelegate?
+
     // MARK: - UI Components
-    // Основная картинка поста
+
+    /// Основная картинка поста
     private let cellImage: UIImageView = {
         let cellImage = UIImageView()
         cellImage.clipsToBounds = true
@@ -26,16 +48,16 @@ final class ImagesListCell: UITableViewCell {
         cellImage.translatesAutoresizingMaskIntoConstraints = false
         return cellImage
     }()
-    
-    // Иконка-заглушка, отображаемая во время загрузки
+
+    /// Иконка-заглушка, отображаемая во время загрузки
     private let stubImageView: UIImageView = {
         let stubImageView = UIImageView()
         stubImageView.image = UIImage(named: "stub")
         stubImageView.translatesAutoresizingMaskIntoConstraints = false
         return stubImageView
     }()
-    
-    // Лейбл для даты публикации
+
+    /// Лейбл для даты публикации
     private let dateLabel: UILabel = {
         let dateLabel = UILabel()
         dateLabel.textColor = UIColor(named: "YP White (iOS)")
@@ -43,33 +65,25 @@ final class ImagesListCell: UITableViewCell {
         dateLabel.translatesAutoresizingMaskIntoConstraints = false
         return dateLabel
     }()
-    
-    // Кнопка установки/снятия лайка
+
+    /// Кнопка установки/снятия лайка
     private let likeButton: UIButton = {
         let likeButton = UIButton()
         likeButton.translatesAutoresizingMaskIntoConstraints = false
         likeButton.accessibilityIdentifier = "likeButton"
         return likeButton
     }()
-    
-    // Подложка под текст с градиентом для лучшей читаемости
+
+    /// Подложка под текст с градиентом для лучшей читаемости
     private let gradientView: UIView = {
         let gradientView = UIView()
         gradientView.translatesAutoresizingMaskIntoConstraints = false
         return gradientView
     }()
-    
-    // MARK: - Private Properties
-    // Форматтер для превращения даты в читаемую строку
-    private static var dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter
-    }()
-    
-    // MARK: - Initializers
-    // Основной инициализатор при создании ячейки из кода
+
+    // MARK: - Initialization
+
+    /// Основной инициализатор при создании ячейки из кода
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
 
@@ -77,24 +91,24 @@ final class ImagesListCell: UITableViewCell {
         setupUI()
         setupConstraints()
     }
-    
-    // Обязательный инициализатор для работы со Storyboard/XIB (не используется)
+
+    /// Обязательный инициализатор для работы со Storyboard/XIB (не используется)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
-    // MARK: - Lifecycle Methods
-    // Подготовка ячейки к повторномуใชванию: отмена фоновой загрузки Kingfisher
+
+    // MARK: - Lifecycle
+
+    /// Подготовка ячейки к повторномуใชванию: отмена фоновой загрузки Kingfisher
     override func prepareForReuse() {
         super.prepareForReuse()
         cellImage.kf.cancelDownloadTask()
     }
-    
-    // Расчет и обновление геометрии слоев (в частности — градиента)
+
+    /// Расчет и обновление геометрии слоев (в частности — градиента)
     override func layoutSubviews() {
         super.layoutSubviews()
-        
-        // Если градиент ещё не добавлен, создаём его
+
         if gradientView.layer.sublayers == nil || gradientView.layer.sublayers?.isEmpty == true {
             let gradient = CAGradientLayer()
             gradient.frame = gradientView.bounds
@@ -104,44 +118,46 @@ final class ImagesListCell: UITableViewCell {
             gradientView.layer.sublayers?.first?.frame = gradientView.bounds
         }
     }
-    
+
     // MARK: - Public Methods
-    
+
+    /// Обновляет внешнее состояние кнопки лайка
     func setIsLiked(_ isLiked: Bool) {
         let likeImage = isLiked ? UIImage(named: "like_button_on") : UIImage(named: "like_button_off")
         likeButton.setImage(likeImage, for: .normal)
     }
-    
-    // Настройка содержимого ячейки данными фотографии
+
+    /// Настройка содержимого ячейки данными фотографии
     func configure(photo: Photo) {
         setIsHidden(true)
-        
+
         if let url = URL(string: photo.thumbImageURL) {
             cellImage.kf.setImage(with: url) { [weak self] result in
                 guard let self = self else { return }
-                
+
                 switch result {
                 case .success:
                     self.setIsHidden(false)
-                case .failure(_):
+                case .failure:
                     self.setIsHidden(false)
                 }
             }
         } else {
             self.setIsHidden(false)
         }
-            
+
         if let createdAt = photo.createdAt {
             dateLabel.text = Self.dateFormatter.string(from: createdAt)
         } else {
             dateLabel.text = ""
         }
-        
+
         setIsLiked(photo.isLiked)
     }
-    
+
     // MARK: - Private Methods
-    // Добавление дочерних представлений в иерархию
+
+    /// Добавление дочерних представлений в иерархию
     private func setupUI() {
         backgroundColor = .clear
         contentView.backgroundColor = .clear
@@ -153,37 +169,37 @@ final class ImagesListCell: UITableViewCell {
         likeButton.addTarget(self, action: #selector(didTaplikeButton), for: .touchUpInside)
     }
 
-    // Настройка ограничений (Auto Layout) для всех элементов
+    /// Настройка ограничений (Auto Layout) для всех элементов
     private func setupConstraints() {
         NSLayoutConstraint.activate([
             cellImage.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
             cellImage.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
             cellImage.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             cellImage.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            
+
             stubImageView.centerXAnchor.constraint(equalTo: cellImage.centerXAnchor),
             stubImageView.centerYAnchor.constraint(equalTo: cellImage.centerYAnchor),
             stubImageView.widthAnchor.constraint(equalToConstant: 83),
             stubImageView.heightAnchor.constraint(equalToConstant: 75),
-            
+
             likeButton.topAnchor.constraint(equalTo: cellImage.topAnchor),
             likeButton.trailingAnchor.constraint(equalTo: cellImage.trailingAnchor),
             likeButton.widthAnchor.constraint(equalToConstant: 44),
             likeButton.heightAnchor.constraint(equalToConstant: 44),
-            
+
             gradientView.leadingAnchor.constraint(equalTo: cellImage.leadingAnchor),
             gradientView.trailingAnchor.constraint(equalTo: cellImage.trailingAnchor),
             gradientView.bottomAnchor.constraint(equalTo: cellImage.bottomAnchor),
             gradientView.heightAnchor.constraint(equalToConstant: 40),
-            
+
             dateLabel.leadingAnchor.constraint(equalTo: cellImage.leadingAnchor, constant: 8),
             dateLabel.trailingAnchor.constraint(equalTo: cellImage.trailingAnchor, constant: -8),
             dateLabel.bottomAnchor.constraint(equalTo: cellImage.bottomAnchor, constant: -8),
             dateLabel.topAnchor.constraint(equalTo: gradientView.topAnchor)
         ])
     }
-    
-    // Переключение видимости UI-элементов во время загрузки и после нее
+
+    /// Переключение видимости UI-элементов во время загрузки и после нее
     private func setIsHidden(_ isLoading: Bool) {
         if isLoading {
             likeButton.isHidden = true
@@ -193,15 +209,11 @@ final class ImagesListCell: UITableViewCell {
         } else {
             stubImageView.isHidden = true
             likeButton.isHidden = false
-            likeButton.isUserInteractionEnabled = true // ДОБАВЛЕНО
             dateLabel.isHidden = false
             gradientView.isHidden = false
-            
-            print("like hidden:", likeButton.isHidden) // ДОБАВЛЕНО
-            print("like frame:", likeButton.frame) // ДОБАВЛЕНО
         }
     }
-    
+
     @objc private func didTaplikeButton() {
         delegate?.imageListCellDidTapLike(self)
     }

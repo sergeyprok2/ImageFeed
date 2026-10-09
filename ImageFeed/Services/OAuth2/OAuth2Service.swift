@@ -1,32 +1,33 @@
 // MARK: - Шпаргалка по файлу:
-// 🏛 АРХИТЕКТУРНЫЙ КОНТЕКСТ:
-// Сервис-синглтон (`shared`), отвечающий за авторизацию OAuth 2.0.
-// Выполняет сетевой запрос к API Unsplash для обмена одноразового `code` (полученного в `WebViewViewController`)
-// на постоянный Bearer-токен. Включает механизм защиты от race condition (состояния гонки) и дублирующих запросов с одним кодом.
-// Вызывается из `AuthViewController`.
-//
-// 📌 КЛЮЧЕВЫЕ СВОЙСТВА И МЕТОДЫ:
-// 1. shared & init() — реализации паттерна Singleton для единой точки доступа.
-// 2. task & lastCode — хранение текущей сетевой таски и последнего запрошенного кода для отмены дублей и предпреждения гонки.
-// 3. makeOAuthTokenRequest(code:) — собирает POST-запрос с параметрами авторизации (client_id, secret, redirect_uri, code).
-// 4. fetchAuthToken(_:completion:) — отменяет предыдущую таску, проверяет код на уникальность, исполняет сетевой запрос и декодирует результат в `OAuthTokenResponseBody`.
+/// **Сервис получения токена авторизации OAuth 2.0 (Слой данных / Model)**
+///
+/// **За что отвечает:**
+/// Сервис-синглтон (`shared`), отвечающий за авторизацию OAuth 2.0. Выполняет сетевой запрос
+/// к API Unsplash для обмена одноразового `code` (полученного в `WebViewViewController`)
+/// на постоянный Bearer-токен. Включает механизм защиты от race condition (состояния гонки)
+/// и дублирующих запросов с одним кодом.
+///
+/// **Задачи:**
+/// 1. Форматирует POST-запрос с параметрами `client_id`, `secret`, `redirect_uri` и `code` к API Unsplash.
+/// 2. Выполняет запрос на получение токена, защищает от дублей через `lastCode`, декодирует `OAuthTokenResponseBody`.
+/// 3. Сохраняет полученный `accessToken` в хранилище `OAuth2TokenStorage`.
 
 import Foundation
 
-// MARK: - Шпаргалка по файлу:
-// 1. makeOAuthTokenRequest — форматирует POST-запрос с параметрами client_id, secret, redirect_uri и code к API Unsplash.
-// 2. fetchAuthToken — выполняет запрос на получение токена, проверяет от дублей через lastCode, декодирует OAuthTokenResponseBody и возвращает accessToken.
+final class OAuth2Service {
 
-// MARK: - OAuth2Service (Сервис получения токена авторизации)
+    // MARK: - Static Properties
 
-class OAuth2Service {
     static let shared = OAuth2Service()
-    init() {} // Запрещаем создавать другие экземпляры (синглтон)
-    
+
+    // MARK: - Private Properties
+
     private let urlSession = URLSession.shared
     private var task: URLSessionTask?
     private var lastCode: String?
     private let dataStorage = OAuth2TokenStorage.shared
+
+    // MARK: - Public Properties
 
     private(set) var authToken: String? {
         get {
@@ -37,27 +38,30 @@ class OAuth2Service {
         }
     }
 
-    // 💡 МЕТОД 1: Отправляет запрос в сеть, забирает OAuth-токен и защищает от повторных дублирующих запросов (состояние гонки)
+    // MARK: - Init
+
+    private init() {}
+
+    // MARK: - Public Methods
+
+    /// Отправляет запрос в сеть, забирает OAuth-токен и защищает от повторных дублирующих запросов (состояние гонки)
     func fetchAuthToken(_ code: String, completion: @escaping (Result<String, Error>) -> Void) {
         assert(Thread.isMainThread)
-        
-        // Защита: если передали тот же код, что и в прошлый раз, отменяем вызов
+
         guard lastCode != code else {
             completion(.failure(NetworkError.invalidRequest))
             return
         }
 
-        task?.cancel() 
+        task?.cancel()
         lastCode = code
-        
-        // 💡 Проверяем, удалось ли собрать URLRequest; если нет — завершаем метод с ошибкой
+
         guard let request = makeOAuthTokenRequest(code: code) else {
             print("[OAuth2Service] ❌ Ошибка: Не удалось создать URLRequest")
             completion(.failure(NetworkError.invalidRequest))
             return
         }
 
-        // 💡 Запускает сетевой запрос и принимает ответ от сервера (данные или ошибку)
         let task = urlSession.objectTask(for: request) { [weak self] (result: Result<OAuthTokenResponseBody, Error>) in
             DispatchQueue.main.async {
                 UIBlockingProgressHUD.dismiss()
@@ -66,16 +70,16 @@ class OAuth2Service {
                 switch result {
                 case .success(let body):
                     let authToken = body.accessToken
-                    self.authToken = authToken // сохраняем в свойство
+                    self.authToken = authToken
                     print("[OAuth2Service] Токен сохранён")
-                    completion(.success(authToken)) // возвращаем наружу
+                    completion(.success(authToken))
 
                     self.task = nil
                     self.lastCode = nil
 
                 case .failure(let error):
                     print("[fetchOAuthToken]: Ошибка запроса: \(error.localizedDescription)")
-                    completion(.failure(error)) // ошибка
+                    completion(.failure(error))
 
                     self.task = nil
                     self.lastCode = nil
@@ -85,8 +89,10 @@ class OAuth2Service {
         self.task = task
         task.resume()
     }
-    
-    // 💡 МЕТОД 2: Собирает POST-запрос с параметрами (client_id, secret, code) для обмена кода на токен
+
+    // MARK: - Private Methods
+
+    /// Собирает POST-запрос с параметрами (client_id, secret, code) для обмена кода на токен
     private func makeOAuthTokenRequest(code: String) -> URLRequest? {
         guard var urlComponents = URLComponents(
             string: Constants.unsplashTokenURLString
@@ -97,10 +103,10 @@ class OAuth2Service {
 
         urlComponents.queryItems = [
             URLQueryItem(name: "client_id", value: Constants.accessKey),
-            URLQueryItem(name: "client_secret",value: Constants.secretKey),
-            URLQueryItem(name: "redirect_uri",value: Constants.redirectURI),
-            URLQueryItem(name: "code",value: code),
-            URLQueryItem(name: "grant_type",value: "authorization_code")
+            URLQueryItem(name: "client_secret", value: Constants.secretKey),
+            URLQueryItem(name: "redirect_uri", value: Constants.redirectURI),
+            URLQueryItem(name: "code", value: code),
+            URLQueryItem(name: "grant_type", value: "authorization_code")
         ]
 
         guard let url = urlComponents.url else {

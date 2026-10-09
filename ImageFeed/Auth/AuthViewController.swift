@@ -1,32 +1,42 @@
-// MARK: - Шпаргалка по файлу:
-// 🏛 АРХИТЕКТУРНЫЙ КОНТЕКСТ:
-// Контроллер экрана авторизации. Управляет кнопкой входа и переходом на `WebViewViewController`.
-// Выступает делегатом для `WebViewViewController`: получает код авторизации, запрашивает Bearer-токен через `OAuth2Service`
-// и сохраняет его в `OAuth2TokenStorage`. Уведомляет `SplashViewController` об успешном входе через `AuthViewControllerDelegate`.
-//
-// 📌 КЛЮЧЕВЫЕ СВОЙСТВА И МЕТОДЫ:
-// 1. delegate — слабый (weak) делегат для передачи события успешной авторизации наверх.
-// 2. oauth2Service — сервис для выполнения сетевого запроса на обмен кода авторизации на токен.
-// 3. oauth2TokenStorage — хранилище для сохранения полученного авторизационного токена.
-// 4. webViewViewController(_:didAuthenticateWithCode:) — обрабатывает полученный код, блокирует UI через HUD и запрашивает токен.
-// 5. configureBackButton() — кастомизирует внешнее отображение кнопки «Назад» в Navigation Bar.
-
+/// **Контроллер экрана авторизации (Слой представления / View Controller)**
+///
+/// **За что отвечает:**
+/// Контроллер экрана авторизации. Управляет кнопкой входа и переходом на `WebViewViewController`.
+/// Выступает делегатом для `WebViewViewController`: получает код авторизации, запрашивает Bearer-токен через `OAuth2Service`
+/// и сохраняет его в `OAuth2TokenStorage`. Уведомляет `SplashViewController` об успешном входе через `AuthViewControllerDelegate`.
+///
+/// **Задачи:**
+/// 1. Отображает UI с кнопкой входа и фирменным логотипом приложения.
+/// 2. Настраивает и презентует `WebViewViewController` вместе с презентером `WebViewPresenter` и помощником `AuthHelper`.
+/// 3. Обрабатывает полученный `code` авторизации от `WebViewViewControllerDelegate`, совершая обмен на токен с отображением `UIBlockingProgressHUD`.
+/// 4. Показывает предупреждающий `UIAlertController` в случае ошибки получения токена.
 
 import UIKit
 import ProgressHUD
 
-// 💡 ПРОТОКОЛ: Позволяет передать событие об успешном входе наверх (в SplashViewController)
+// MARK: - AuthViewControllerDelegate
+
+/// Протокол для уведомления родительского контроллера (SplashViewController) об успешной авторизации
 protocol AuthViewControllerDelegate: AnyObject {
     func didAuthenticate(_ vc: AuthViewController)
 }
 
+// MARK: - AuthViewController
+
 final class AuthViewController: UIViewController {
+
+    // MARK: - Public Properties
+
+    weak var delegate: AuthViewControllerDelegate?
+
+    // MARK: - Private Properties
+
     private let showWebViewSegueIdentifier = "ShowWebView"
     private let oauth2Service = OAuth2Service.shared
     private let oauth2TokenStorage = OAuth2TokenStorage.shared
-    
-    weak var delegate: AuthViewControllerDelegate?
-    
+
+    // MARK: - UI Components
+
     private lazy var button: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = UIColor(named: "YP White (iOS)")
@@ -35,11 +45,10 @@ final class AuthViewController: UIViewController {
         button.layer.cornerRadius = 16
         button.titleLabel?.font = UIFont.systemFont(ofSize: 17, weight: .bold)
         button.translatesAutoresizingMaskIntoConstraints = false
-//        button.isAccessibilityElement = true
         button.accessibilityIdentifier = "Authenticate"
         return button
     }()
-    
+
     private lazy var icon: UIImageView = {
         let logo = UIImageView()
         logo.image = UIImage(named: "auth_screen_logo")
@@ -47,7 +56,8 @@ final class AuthViewController: UIViewController {
         return logo
     }()
 
-    // 💡 ЖИЗНЕННЫЙ ЦИКЛ: При загрузке экрана кастомизирует кнопку «Назад» в Navigation Bar
+    // MARK: - Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(named: "YP Black (iOS)")
@@ -55,48 +65,49 @@ final class AuthViewController: UIViewController {
         setupUI()
         setupConstraints()
         button.addTarget(self, action: #selector(didTapButton), for: .touchUpInside)
-        
     }
-    
+
+    // MARK: - Actions
+
+    @objc private func didTapButton() {
+        let webViewViewController = WebViewViewController()
+        let authHelper = AuthHelper()
+        let webViewPresenter = WebViewPresenter(authHelper: authHelper)
+
+        webViewViewController.presenter = webViewPresenter
+        webViewPresenter.view = webViewViewController
+        webViewViewController.delegate = self
+
+        navigationController?.pushViewController(webViewViewController, animated: true)
+    }
+
+    // MARK: - Private Methods
+
+    /// Добавляет UI-компоненты на экран
     private func setupUI() {
         view.addSubview(button)
         view.addSubview(icon)
     }
 
+    /// Устанавливает верстку Auto Layout
     private func setupConstraints() {
         NSLayoutConstraint.activate([
             button.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
             button.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
             button.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -90),
             button.heightAnchor.constraint(equalToConstant: 48),
-            
+
             icon.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             icon.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             icon.heightAnchor.constraint(equalToConstant: 60),
             icon.widthAnchor.constraint(equalToConstant: 60)
         ])
     }
-    
-    @objc private func didTapButton() {
-        let webViewViewController = WebViewViewController()
-        webViewViewController.delegate = self
-        
-        let authHelper = AuthHelper()
-        let webViewPresenter = WebViewPresenter(authHelper: authHelper)
-        webViewViewController.presenter = webViewPresenter
-        webViewPresenter.view = webViewViewController
-        webViewViewController.delegate = self
-        
-        navigationController?.pushViewController(webViewViewController, animated: true)
-    }
 
-    // 💡 ВНЕШНИЙ ВИД: Настраивает кастомную иконку и внешний вид кнопки «Назад»
+    /// Настраивает кастомную иконку и внешний вид кнопки «Назад» в Navigation Bar
     private func configureBackButton() {
-        navigationController?.navigationBar.backIndicatorImage =
-            UIImage(named: "nav_back_button")
-
-        navigationController?.navigationBar.backIndicatorTransitionMaskImage =
-            UIImage(named: "nav_back_button")
+        navigationController?.navigationBar.backIndicatorImage = UIImage(named: "nav_back_button")
+        navigationController?.navigationBar.backIndicatorTransitionMaskImage = UIImage(named: "nav_back_button")
 
         navigationItem.backBarButtonItem = UIBarButtonItem(
             title: "",
@@ -107,49 +118,8 @@ final class AuthViewController: UIViewController {
 
         navigationItem.backBarButtonItem?.tintColor = UIColor(named: "YP Black (iOS)")
     }
-}
 
-// MARK: - WebViewViewControllerDelegate
-
-extension AuthViewController: WebViewViewControllerDelegate {
-    
-    // 💡 ДЕЛЕГАТ ВЕБ-ВЬЮ: Получает код авторизации от WebView, обменивает его на токен через OAuth2Service и сохраняет результат
-    func webViewViewController(_ vc: WebViewViewController,didAuthenticateWithCode code: String) {
-
-        // Показываем индикатор загрузки
-        UIBlockingProgressHUD.show()
-        
-        oauth2Service.fetchAuthToken(code) { [weak self] result in
-            // Скрываем индикатор загрузки
-            // Это действие выполняется только один раз до кейсов `switch`, потому что индикатор нужно скрыть при любом исходе сетевого запроса - как при успехе, так и при ошибке.
-            UIBlockingProgressHUD.dismiss()
-            
-            guard let self = self else {
-                return
-            }
-
-            switch result {
-            case .success(let token):
-                print("Успешно получен токен: \(token)")
-                // Уведомляем делегат (SplashViewController) об успешной авторизации
-                self.delegate?.didAuthenticate(self)
-
-            case .failure(let error):
-                print("[AuthViewController] Ошибка получения токена: \(error)")
-                DispatchQueue.main.async {
-                    self.showAuthErrorAlert()
-                }
-            }
-        }
-    }
-
-    // 💡 ДЕЛЕГАТ ВЕБ-ВЬЮ: Срабатывает при отмене авторизации пользователем — возвращает на предыдущий экран
-    func webViewViewControllerDidCancel(_ vc: WebViewViewController) {
-        navigationController?.popViewController(animated: true)
-    }
-}
-
-extension AuthViewController {
+    /// Отображает модальное окно ошибки авторизации
     func showAuthErrorAlert() {
         let alertController = UIAlertController(
             title: "Что-то пошло не так",
@@ -162,4 +132,35 @@ extension AuthViewController {
     }
 }
 
+// MARK: - WebViewViewControllerDelegate
 
+extension AuthViewController: WebViewViewControllerDelegate {
+
+    /// Получает код авторизации от WebView, обменивает его на токен через OAuth2Service и сохраняет результат
+    func webViewViewController(_ vc: WebViewViewController, didAuthenticateWithCode code: String) {
+        UIBlockingProgressHUD.show()
+
+        oauth2Service.fetchAuthToken(code) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+
+            guard let self = self else { return }
+
+            switch result {
+            case .success(let token):
+                print("Успешно получен токен: \(token)")
+                self.delegate?.didAuthenticate(self)
+
+            case .failure(let error):
+                print("[AuthViewController] Ошибка получения токена: \(error)")
+                DispatchQueue.main.async {
+                    self.showAuthErrorAlert()
+                }
+            }
+        }
+    }
+
+    /// Срабатывает при отмене авторизации пользователем — возвращает на предыдущий экран
+    func webViewViewControllerDidCancel(_ vc: WebViewViewController) {
+        navigationController?.popViewController(animated: true)
+    }
+}
