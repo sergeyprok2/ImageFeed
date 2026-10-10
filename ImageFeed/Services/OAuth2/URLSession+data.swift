@@ -1,26 +1,25 @@
-// MARK: - Шпаргалка по файлу:
-// 🏛 АРХИТЕКТУРНЫЙ КОНТЕКСТ:
-// Инфраструктурный слой сетевого взаимодействия приложения.
-// Содержит enum `NetworkError` с описанием типизированных ошибок сети и расширение `URLSession` с хелпер-методом `data(for:)`.
-// Метод перехватывает HTTP-статусы, валидирует диапазон успешных ответов (200..<300) и гарантированно возвращает результат `Result<Data, Error>` в главном потоке (`DispatchQueue.main`), изолируя UI-слой от вызовов из фоновых потоков.
-//
-// 📌 КЛЮЧЕВЫЕ СВОЙСТВА И МЕТОДЫ:
-// 1. NetworkError — перечисление ошибок (HTTP статус-коды, отсутствие сети, ошибки парсинга и валидации).
-// 2. data(for:completion:) — обертка над `dataTask(with:)`, выполняющая обработку базовых сценариев ответа сервера.
-// 3. fulfillCompletionOnTheMainThread — замыкание-помощник для безопасной передачи результата работы в `DispatchQueue.main`.
+/// **Инфраструктурный слой сетевого взаимодействия приложения**
+///
+/// **За что отвечает:**
+/// Предоставляет механизмы обработки сетевых запросов и декодирования JSON.
+/// Содержит enum `NetworkError` с описанием типизированных ошибок сети и расширение `URLSession`
+/// с универсальными методами выполнения запросов `data(for:)` и `objectTask(for:)`.
+///
+/// **Задачи:**
+/// 1. Описывает категорию сетевых ошибок (ошибки HTTP-статусов, парсинга, отсутствие сети).
+/// 2. Выполняет базовую валидацию ответов сервера (статус-коды 200..<300) в `data(for:)`.
+/// 3. Гарантированно возвращает результат вызова в главном потоке (`DispatchQueue.main`).
+/// 4. Декодирует бинарные данные JSON в универсальные модели Swift типа `Decodable`.
 
 import Foundation
 
-//  fulfillCompletionOnTheMainThread — форсирует возврат ответа в DispatchQueue.main, чтобы UI не падал при обновлении.
+// MARK: - NetworkError
 
-// 💡 ОШИБКИ: Перечисление всех возможных сетевых ошибок для удобной обработки
-import Foundation
-
-// MARK: - Ошибки
+/// Перечисление возможных сетевых ошибок для удобной и безопасной обработки
 enum NetworkError: Error {
     case httpStatusCode(Int)      // Сервер вернул плохой статус-код
     case urlRequestError(Error)   // Ошибка самого запроса или отсутствие сети
-    case urlSessionError          // Ошибка URLSession
+    case urlSessionError          // Ошибка URLSession (отсутствуют данные и ошибка)
     case invalidRequest           // Некорректный URLRequest
     case decodingError(Error)     // Ошибка парсинга JSON
 }
@@ -28,7 +27,10 @@ enum NetworkError: Error {
 // MARK: - URLSession Extension
 
 extension URLSession {
-    
+
+    // MARK: - Public Methods
+
+    /// Выполняет сетевой запрос, валидирует HTTP-статус и возвращает бинарные данные `Data` в главном потоке
     func data(for request: URLRequest, completion: @escaping (Result<Data, Error>) -> Void) -> URLSessionTask {
         let fulfillCompletionOnTheMainThread: (Result<Data, Error>) -> Void = { result in
             DispatchQueue.main.async {
@@ -38,11 +40,11 @@ extension URLSession {
 
         let task = dataTask(with: request) { data, response, error in
             let urlString = request.url?.absoluteString ?? "Неизвестный URL"
-            
+
             if let data = data,
                let response = response,
                let statusCode = (response as? HTTPURLResponse)?.statusCode {
-                
+
                 if 200..<300 ~= statusCode {
                     fulfillCompletionOnTheMainThread(.success(data))
                 } else {
@@ -61,7 +63,8 @@ extension URLSession {
 
         return task
     }
-    
+
+    /// Выполняет сетевой запрос и автоматически декодирует полученный JSON в указанный тип `Decodable`
     func objectTask<T: Decodable>(
         for request: URLRequest,
         completion: @escaping (Result<T, Error>) -> Void
@@ -70,7 +73,7 @@ extension URLSession {
 
         let task = data(for: request) { (result: Result<Data, Error>) in
             let urlString = request.url?.absoluteString ?? "Неизвестный URL"
-            
+
             switch result {
             case .success(let data):
                 do {
@@ -83,7 +86,6 @@ extension URLSession {
                 }
 
             case .failure(let error):
-                // Ошибка уже залогирована в методе data(for:), передаём failure дальше
                 completion(.failure(error))
             }
         }
